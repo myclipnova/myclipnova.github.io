@@ -1,34 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Website</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #111827;
-      color: #f3f4f6;
-      text-align: center;
-      padding: 60px 20px;
-    }
-    h1 { font-size: 2.5rem; margin-bottom: 10px; }
-    p { color: #9ca3af; }
-    a.button {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 24px;
-      background: #8b5cf6;
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VidSpark - Make Videos Free</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#0b0f1a;color:#f3f4f6}
+.glow{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 20% 20%,rgba(139,92,246,.35),transparent 40%),radial-gradient(circle at 80% 70%,rgba(6,182,212,.3),transparent 40%)}
+header{text-align:center;padding:60px 20px 20px}
+h1{font-size:3rem;margin:0;background:linear-gradient(90deg,#a78bfa,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+header p{color:#9ca3af;font-size:1.1rem}
+.studio{max-width:1000px;margin:20px auto;padding:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:16px}
+canvas{width:100%;border-radius:12px;background:#000}
+label{display:block;margin:14px 0 6px;color:#c4b5fd;font-weight:bold}
+textarea,select,input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid #374151;background:#111827;color:#fff;font-size:1rem}
+textarea{height:110px}
+button,a.btn{display:inline-block;margin:16px 10px 0 0;padding:12px 24px;border:0;border-radius:8px;background:linear-gradient(90deg,#8b5cf6,#06b6d4);color:#fff;font-size:1rem;cursor:pointer;text-decoration:none}
+button.alt{background:#374151}
+#msg{color:#9ca3af;margin-top:12px}
+.cards{display:flex;gap:16px;flex-wrap:wrap;max-width:1000px;margin:30px auto;padding:0 20px}
+.card{flex:1;min-width:220px;padding:20px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+footer{text-align:center;color:#6b7280;padding:30px}
+</style>
 </head>
 <body>
-  <h1>Welcome to my website</h1>
-  <p>This is my first page, made for free with GitHub Pages.</p>
-  <a class="button" href="#">Click me</a>
+<div class="glow"></div>
+<header>
+  <h1>VidSpark</h1>
+  <p>Make cool videos in your browser. Free. No sign up.</p>
+</header>
+
+<div class="studio">
+  <canvas id="stage" width="1280" height="720"></canvas>
+
+  <label>Your text (one line = one scene)</label>
+  <textarea id="text">Hello world!
+Make videos for free
+Made with VidSpark</textarea>
+
+  <label>Color style</label>
+  <select id="theme">
+    <option value="purple">Purple Galaxy</option>
+    <option value="sunset">Sunset</option>
+    <option value="ocean">Ocean</option>
+    <option value="forest">Forest</option>
+  </select>
+
+  <label>Seconds per scene</label>
+  <input type="number" id="sec" value="3" min="1" max="10">
+
+  <label>Add pictures (optional)</label>
+  <input type="file" id="imgs" accept="image/*" multiple>
+
+  <button onclick="play(false)" class="alt">Preview</button>
+  <button onclick="play(true)">Make Video</button>
+  <a id="dl" class="btn" download="my-video.webm" style="display:none">Download Video</a>
+  <div id="msg"></div>
+</div>
+
+<div class="cards">
+  <div class="card"><h3>Free</h3><p>Everything runs on your own device.</p></div>
+  <div class="card"><h3>Fast</h3><p>Make a video in seconds.</p></div>
+  <div class="card"><h3>AI tools</h3><p>Coming soon!</p></div>
+</div>
+<footer>Made with VidSpark</footer>
+
+<script>
+const c=document.getElementById('stage'),x=c.getContext('2d');
+const msg=document.getElementById('msg');
+let images=[];
+document.getElementById('imgs').addEventListener('change',e=>{
+  images=[];
+  [...e.target.files].forEach(f=>{const im=new Image();im.src=URL.createObjectURL(f);images.push(im);});
+});
+const themes={
+  purple:['#4c1d95','#8b5cf6','#06b6d4'],
+  sunset:['#7c2d12','#f97316','#ec4899'],
+  ocean:['#0c4a6e','#0ea5e9','#22d3ee'],
+  forest:['#064e3b','#10b981','#a3e635']
+};
+function wrap(text,cx,cy,maxW,lh){
+  const words=text.split(' ');let line='',rows=[];
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(x.measureText(test).width>maxW&&line){rows.push(line);line=w}else line=test;
+  }
+  rows.push(line);
+  const startY=cy-(rows.length-1)*lh/2;
+  rows.forEach((r,i)=>x.fillText(r,cx,startY+i*lh));
+}
+function drawFrame(t,lines,per,theme){
+  const W=c.width,H=c.height;
+  const idx=Math.min(lines.length-1,Math.floor(t/per));
+  const lt=t-idx*per;
+  const col=themes[theme];
+  const g=x.createLinearGradient(0,0,W,H);
+  const shift=(Math.sin(t*0.8)+1)/2;
+  g.addColorStop(0,col[0]);g.addColorStop(0.5+shift*0.2,col[1]);g.addColorStop(1,col[2]);
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  const im=images.length?images[idx%images.length]:null;
+  if(im&&im.complete&&im.naturalWidth){
+    const zoom=1+0.08*(lt/per);
+    const r=Math.max(W/im.naturalWidth,H/im.naturalHeight)*zoom;
+    const w=im.naturalWidth*r,h=im.naturalHeight*r;
+    x.drawImage(im,(W-w)/2,(H-h)/2,w,h);
+    x.fillStyle='rgba(0,0,0,.45)';x.fillRect(0,0,W,H);
+  }
+  for(let i=0;i<25;i++){
+    const px=(i*97+t*30*(1+i%3))%W;
+    const py=(i*53+Math.sin(t+i)*40+H)%H;
+    x.fillStyle='rgba(255,255,255,.15)';
+    x.beginPath();x.arc(px,py,4+i%5,0,7);x.fill();
+  }
+  const a=Math.min(1,lt/0.5)*Math.min(1,(per-lt)/0.4);
+  x.globalAlpha=Math.max(0,a);
+  x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';
+  x.font='bold 72px Arial';x.shadowColor='rgba(0,0,0,.6)';x.shadowBlur=20;
+  wrap(lines[idx],W/2,H/2+(1-Math.min(1,lt/0.5))*30,W-200,86);
+  x.globalAlpha=1;x.shadowBlur=0;
+}
+function getInputs(){
+  const lines=document.getElementById('text').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  return {
+    lines:lines.length?lines:['Type something!'],
+    per:+document.getElementById('sec').value||3,
+    theme:document.getElementById('theme').value
+  };
+}
+function play(record){
+  const {lines,per,theme}=getInputs();
+  const total=lines.length*per;
+  let rec,chunks=[];
+  document.getElementById('dl').style.display='none';
+  if(record){
+    const stream=c.captureStream(30);
+    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{
+      const url=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+      const a=document.getElementById('dl');
+      a.href=url;a.style.display='inline-block';
+      msg.textContent='Done! Click Download Video.';
+    };
+    rec.start();
+    msg.textContent='Making your video... please wait.';
+  }
+  const start=performance.now();
+  function loop(now){
+    const t=(now-start)/1000;
+    if(t>=total){drawFrame(total-0.01,lines,per,theme);if(rec)rec.stop();return;}
+    drawFrame(t,lines,per,theme);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+(function(){const i=getInputs();drawFrame(0.8,i.lines,i.per,i.theme);})();
+</script>
 </body>
 </html>
