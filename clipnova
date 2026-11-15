@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipNova — AI Video Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b12;
+      --card: #14141f;
+      --card-hover: #1a1a28;
+      --border: #2a2a3d;
+      --text: #f0f0f5;
+      --text-muted: #9a9ab0;
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --primary-glow: rgba(139, 92, 246, 0.35);
+      --accent: #06b6d4;
+      --success: #22c55e;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 30%, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* Main Card */
+    .main-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .section {
+      margin-bottom: 28px;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Upload Area */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(139, 92, 246, 0.03);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(139, 92, 246, 0.08);
+    }
+
+    .upload-zone.has-image {
+      padding: 0;
+      border-style: solid;
+    }
+
+    .upload-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.7;
+    }
+
+    .upload-text {
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .upload-hint {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .image-preview {
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      display: block;
+      background: #0a0a10;
+    }
+
+    .remove-image {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .upload-zone.has-image .remove-image {
+      display: flex;
+    }
+
+    .remove-image:hover {
+      background: #ef4444;
+    }
+
+    /* Prompt */
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      background: #0e0e18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    textarea::placeholder {
+      color: #5a5a70;
+    }
+
+    /* Options row */
+    .options-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .options-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    select {
+      width: 100%;
+      background: #0e0e18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239a9ab0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Generate Button */
+    .generate-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary), #6d28d9);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--primary-glow);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .generate-btn.loading {
+      background: #3f3f5a;
+    }
+
+
+    /* API key + model */
+    .key-box {
+      background: #0e0e18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .key-box input[type="password"],
+    .key-box input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    .key-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .key-help {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .key-help a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .key-help a:hover {
+      text-decoration: underline;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .result-video {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      background: #000;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .result-link {
+      display: none;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .result-note {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .result-note.error {
+      color: #f87171;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .result-placeholder::before { animation: none; }
+      .result-area.show { animation: none; }
+    }
+
+    /* Result area */
+    .result-area {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .result-area.show {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card {
+      background: #0e0e18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .result-placeholder {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-placeholder::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .result-icon {
+      font-size: 40px;
+      opacity: 0.5;
+    }
+
+    .result-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 640px) {
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary);
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Footer note */
+    .note {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .note a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .note a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🎬</div>
+        <span class="logo-text">ClipNova</span>
+      </div>
+      <h1>Turn photos into AI videos</h1>
+      <p>Upload an image, describe the motion you want, and generate a video in a minute or two.</p>
+    </header>
+
+    <div class="main-card">
+      <!-- Image Upload -->
+      <div class="section">
+        <label class="section-label">Your Image</label>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="imageInput" accept="image/*">
+          <button class="remove-image" id="removeImage" title="Remove image">✕</button>
+          <div id="uploadContent">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">Click or drag & drop your image</div>
+            <div class="upload-hint">PNG, JPG, WEBP up to 10MB</div>
+          </div>
+          <img id="imagePreview" class="image-preview" style="display: none;" alt="Preview">
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="section">
+        <label class="section-label" for="prompt">Prompt</label>
+        <textarea id="prompt" placeholder="Describe the video you want... e.g. 'A cinematic slow zoom out of the city at sunset with gentle camera movement'"></textarea>
+      </div>
+
+      <!-- Options -->
+      <div class="section">
+        <div class="options-row">
+          <div>
+            <label class="section-label" for="model">AI model</label>
+            <select id="model">
+              <option value="fal-ai/ltx-video/image-to-video">LTX Video (fastest, lowest cost)</option>
+              <option value="fal-ai/hunyuan-video-image-to-video">HunyuanVideo (higher quality)</option>
+            </select>
+          </div>
+          <div>
+            <label class="section-label" for="style">Style</label>
+            <select id="style">
+              <option value="cinematic">Cinematic</option>
+              <option value="realistic">Realistic</option>
+              <option value="anime">Anime</option>
+              <option value="3d">3D Animation</option>
+              <option value="vintage">Vintage Film</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- API key -->
+      <div class="section">
+        <div class="key-box">
+          <label class="section-label" for="apiKey">Your fal.ai API key</label>
+          <input type="password" id="apiKey" placeholder="Paste your key here" autocomplete="off" spellcheck="false">
+          <label class="remember">
+            <input type="checkbox" id="rememberKey" checked>
+            Remember the key on this device
+          </label>
+          <p class="key-help">
+            Get a key at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener">fal.ai/dashboard/keys</a>.
+            fal.ai charges per video, to the account the key belongs to. Your key stays in this browser and is sent only to fal.ai.
+          </p>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <button class="generate-btn" id="generateBtn">
+        <span>✨</span>
+        <span>Generate Video</span>
+      </button>
+
+      <!-- Result -->
+      <div class="result-area" id="resultArea">
+        <div class="result-card">
+          <div class="result-placeholder" id="resultPlaceholder">
+            <div class="result-icon">🎥</div>
+            <div class="result-text" id="resultText">Your video will appear here</div>
+          </div>
+          <video id="resultVideo" class="result-video" controls playsinline loop></video>
+          <a id="resultLink" class="result-link" href="#" target="_blank" rel="noopener">Open video in a new tab to download</a>
+          <p class="result-note" id="resultNote" role="status"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Fast</h3>
+        <p>Most videos are ready in a minute or two.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3>Image to Video</h3>
+        <p>Upload any photo and bring it to life with motion.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Multiple Styles</h3>
+        <p>Cinematic, anime, realistic and more styles available.</p>
+      </div>
+    </div>
+
+    <p class="note">
+      Built for you · Host free on <a href="https://pages.github.com/" target="_blank">GitHub Pages</a>
+    </p>
+  </div>
+
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const uploadContent = document.getElementById('uploadContent');
+    const removeImage = document.getElementById('removeImage');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultArea = document.getElementById('resultArea');
+    const resultText = document.getElementById('resultText');
+    const promptInput = document.getElementById('prompt');
+
+    // Click to upload
+    uploadZone.addEventListener('click', (e) => {
+      if (e.target !== removeImage) {
+        imageInput.click();
+      }
+    });
+
+    // Drag & drop
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    imageInput.addEventListener('change', () => {
+      if (imageInput.files.length) {
+        handleFile(imageInput.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imagePreview.src = e.target.result;
+        imagePreview.style.display = 'block';
+        uploadContent.style.display = 'none';
+        uploadZone.classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    removeImage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      imagePreview.src = '';
+      imagePreview.style.display = 'none';
+      uploadContent.style.display = 'block';
+      uploadZone.classList.remove('has-image');
+      imageInput.value = '';
+    });
+
+    // ---- Video generation through fal.ai (key stays in this browser) ----
+    const keyInput = document.getElementById('apiKey');
+    const rememberKey = document.getElementById('rememberKey');
+    const modelSelect = document.getElementById('model');
+    const styleSelect = document.getElementById('style');
+    const resultVideo = document.getElementById('resultVideo');
+    const resultLink = document.getElementById('resultLink');
+    const resultNote = document.getElementById('resultNote');
+    const resultPlaceholder = document.getElementById('resultPlaceholder');
+    const KEY_STORE = 'clipnova_fal_key';
+
+    try {
+      const saved = localStorage.getItem(KEY_STORE);
+      if (saved) keyInput.value = saved;
+    } catch (e) { /* storage can be blocked; the key just won't be remembered */ }
+
+    const stylePrompts = {
+      cinematic: 'cinematic, film look, smooth camera movement',
+      realistic: 'realistic, natural motion, true to life',
+      anime: 'anime style, expressive animation',
+      '3d': '3D animation style, smooth motion',
+      vintage: 'vintage film look, grainy, soft colors'
+    };
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function setStatus(text, isError) {
+      resultText.textContent = text;
+      resultNote.textContent = isError ? text : '';
+      resultNote.classList.toggle('error', !!isError);
+    }
+
+    // Shrink the image so the request stays small and fast
+    function getResizedImage(maxSide) {
+      const img = imagePreview;
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.9);
+    }
+
+    async function falRequest(url, key, options) {
+      options = options || {};
+      const headers = { 'Authorization': 'Key ' + key };
+      if (options.body) headers['Content-Type'] = 'application/json';
+      const res = await fetch(url, { method: options.method || 'GET', headers: headers, body: options.body });
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { /* not JSON */ }
+      if (!res.ok) {
+        let detail = '';
+        if (data && data.detail) detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+        const err = new Error(detail || text.slice(0, 200) || ('Request failed (' + res.status + ')'));
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
+
+    function friendlyError(err) {
+      if (err.status === 401) return 'fal.ai did not accept this key. Check that you copied the whole key.';
+      if (err.status === 403) return 'fal.ai refused the request. Your account may be out of balance. Details: ' + err.message;
+      if (err.name === 'TypeError') return 'Could not reach fal.ai. Check your internet connection and try again.';
+      return err.message || 'Something went wrong. Please try again.';
+    }
+
+    function setBusy(busy) {
+      generateBtn.disabled = busy;
+      generateBtn.classList.toggle('loading', busy);
+      generateBtn.innerHTML = busy
+        ? '<span>⏳</span><span>Generating...</span>'
+        : '<span>✨</span><span>Generate Video</span>';
+    }
+
+    generateBtn.addEventListener('click', async () => {
+      const hasImage = uploadZone.classList.contains('has-image');
+      const prompt = promptInput.value.trim();
+      const key = keyInput.value.trim();
+
+      if (!hasImage) { alert('Please upload an image first.'); return; }
+      if (!prompt) { alert('Please enter a prompt describing the video.'); return; }
+      if (!key) { alert('Paste your fal.ai API key first.'); keyInput.focus(); return; }
+
+      try {
+        if (rememberKey.checked) localStorage.setItem(KEY_STORE, key);
+        else localStorage.removeItem(KEY_STORE);
+      } catch (e) { /* ignore */ }
+
+      setBusy(true);
+      resultArea.classList.add('show');
+      resultVideo.style.display = 'none';
+      resultVideo.removeAttribute('src');
+      resultLink.style.display = 'none';
+      resultPlaceholder.style.display = 'flex';
+      setStatus('Sending your image...');
+
+      try {
+        const model = modelSelect.value;
+        const fullPrompt = prompt + '. ' + (stylePrompts[styleSelect.value] || '');
+        const body = JSON.stringify({ prompt: fullPrompt, image_url: getResizedImage(1280) });
+
+        const job = await falRequest('https://queue.fal.run/' + model, key, { method: 'POST', body: body });
+
+        const started = Date.now();
+        while (true) {
+          await sleep(3000);
+          const st = await falRequest(job.status_url, key);
+          if (st.status === 'COMPLETED') break;
+          if (st.status === 'IN_QUEUE') {
+            setStatus(typeof st.queue_position === 'number'
+              ? 'Waiting in line (place ' + (st.queue_position + 1) + ')...'
+              : 'Waiting in line...');
+          } else {
+            setStatus('Creating your video... this can take a minute or two.');
+          }
+          if (Date.now() - started > 10 * 60 * 1000) {
+            throw new Error('This is taking too long. Please try again in a few minutes.');
+          }
+        }
+
+        const out = await falRequest(job.response_url, key);
+        const videoUrl = out && out.video && out.video.url;
+        if (!videoUrl) throw new Error('fal.ai finished but did not return a video. Please try again.');
+
+        resultPlaceholder.style.display = 'none';
+        resultVideo.src = videoUrl;
+        resultVideo.style.display = 'block';
+        resultLink.href = videoUrl;
+        resultLink.style.display = 'inline-block';
+        setStatus('');
+        resultNote.textContent = 'Your video is ready.';
+      } catch (err) {
+        setStatus(friendlyError(err), true);
+      } finally {
+        setBusy(false);
+      }
+    });
+  </script>
+</body>
+</html>
